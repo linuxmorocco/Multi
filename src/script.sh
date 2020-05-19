@@ -46,11 +46,9 @@ link_resolve() {
     cnt_cmd=($(echo $(basename $0) | sed 's/::/ /'))
     [ ${#cnt_cmd[@]} -lt 2 ] && {
         cmd=$(basename $0)
-        IPATH=$PATH
         for cnt in $(echo $CONTAINERS | nl | sort -r | cut -f2); do
-            IPATH="$PATH_PROJECT/$cnt/bin:$IPATH"
+            run $cnt which $cmd > /dev/null && break
         done
-        PATH=$IPATH which $cmd > /dev/null
         cnt_cmd=($cnt $cmd)
     }
     echo ${cnt_cmd[@]}
