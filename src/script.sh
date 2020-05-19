@@ -3,7 +3,8 @@
 # script.sh
 #
 #
-PATH_PROJECT=~/fs
+PATH_PROJECT=/archive/machines
+#PATH_PROJECT=~/fs
 init() {
     echo "init"
     mkdir -p $PATH_PROJECT
@@ -28,6 +29,32 @@ fetch() {
 
 link() {
     echo "link"
+    [ -d $3 ] && { # path to dir
+        PATH_DEST_ABS=$(realpath $3)/$2
+    } || { # path to file
+        PATH_DEST_ABS=$(dirname $3)/$(basename $3)
+    }
+    ln -s $PATH_SCRIPT $PATH_DEST_ABS
+}
+
+link_resolve() {
+    [ -z "$CONTPATH" ] && {
+        CONTAINERS=$(sudo ls $PATH_PROJECT)
+    } || {
+        CONTAINERS=$(echo $CONTPATH | tr ':' ' ')
+    }
+    cnt_cmd=($(echo $(basename $0) | sed 's/::/ /'))
+    [ ${#cnt_cmd[@]} -lt 2 ] && {
+        cmd=$(basename $0)
+        IPATH=$PATH
+        for cnt in $(echo $CONTAINERS | nl | sort -r | cut -f2); do
+            IPATH="$PATH_PROJECT/$cnt/bin:$IPATH"
+        done
+        PATH=$IPATH which $cmd > /dev/null
+        cnt_cmd=($cnt $cmd)
+    }
+    echo ${cnt_cmd[@]}
+    run ${cnt_cmd[*]} $@
 }
 
 run() {
@@ -42,29 +69,34 @@ print_help() {
     Operations :
         init    : init ....
         fetch   : fetch fs from docker or .....
-        link    : link
+        link    : link binaries from container to path
         run     : run a command \n"
 }
 
-operation="${1:-}"
-[ -z "$operation" ] || shift
-case $operation in
-    "init" )
-        init $@
-    ;;
-    "fetch" )
-        fetch $@
-    ;;
-    "link" )
-        link $@
-    ;;
-    "run" )
-        run $@
-    ;;
-    *)
-        print_help
-    ;;
-esac
+if [ "$(basename $0)" != script.sh ]; then
+    link_resolve $@
+else
+    PATH_SCRIPT=$(realpath $0)
+    operation="${1:-}"
+    [ -z "$operation" ] || shift
+    case $operation in
+        "init" )
+            init $@
+            ;;
+        "fetch" )
+            fetch $@
+            ;;
+        "link" )
+            link $@
+            ;;
+        "run" )
+            run $@
+            ;;
+        *)
+            print_help
+            ;;
+    esac
+fi
 
 trap '' EXIT
 exit 0
