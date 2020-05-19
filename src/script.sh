@@ -3,7 +3,7 @@
 # script.sh
 #
 #
-PATH_PROJECT=~/fs/
+PATH_PROJECT=~/fs
 init() {
     echo "init"
     mkdir -p $PATH_PROJECT
@@ -29,32 +29,37 @@ fetch() {
 link() {
     echo "link"
 }
+
 run() {
     echo "run"
-    cmd=${2}" "${3}
-    sudo systemd-nspawn --machine ${1} --directory $PATH_PROJECT${1} $cmd
+    container=${1}
+    shift
+    sudo systemd-nspawn -q -UM $container -D $PATH_PROJECT/$container $@
 }
+
 print_help() {
-    printf "Usage : ./script <Operation> <Param>
+    printf "Usage : $(basename $0) <Operation> <Param>
     Operations :
         init    : init ....
         fetch   : fetch fs from docker or .....
         link    : link
-        run     : run a command "
+        run     : run a command \n"
 }
 
-case "${1:-}" in
+operation="${1:-}"
+[ -z "$operation" ] || shift
+case $operation in
     "init" )
-        init ${2}
+        init $@
     ;;
     "fetch" )
-        fetch ${2} ${3}
+        fetch $@
     ;;
     "link" )
-        link
+        link $@
     ;;
     "run" )
-        run ${2} ${3} ${4}
+        run $@
     ;;
     *)
         print_help
